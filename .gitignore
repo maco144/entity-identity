@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Build outputs
+build/
+
 # Circom build outputs
 *.r1cs
 *.wasm
