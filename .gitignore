@@ -44,3 +44,7 @@ npm-debug.log*
 
 # API data
 api/data/
+
+# Certificates
+certs/
+*.pem

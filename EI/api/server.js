@@ -10,8 +10,10 @@ import Database from 'better-sqlite3';
 import { buildPoseidon } from 'circomlibjs';
 import { buildEddsa } from 'circomlibjs';
 import * as snarkjs from 'snarkjs';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { randomBytes, createHash } from 'crypto';
+import https from 'https';
+import http from 'http';
 
 // ============================================================================
 // CONFIGURATION
@@ -19,10 +21,21 @@ import { randomBytes, createHash } from 'crypto';
 
 const config = {
     port: process.env.PORT || 3000,
+    httpsPort: process.env.HTTPS_PORT || 3443,
     adminApiKey: process.env.ADMIN_API_KEY || 'dev-admin-key-change-me',
     dbPath: process.env.DB_PATH || './data/ei.db',
-    assetsBaseUrl: process.env.ASSETS_URL || 'http://localhost:3000/assets',
+    assetsBaseUrl: process.env.ASSETS_URL || null, // Auto-detect if not set
     merkleDepth: 20,
+
+    // HTTPS configuration
+    https: {
+        enabled: process.env.HTTPS_ENABLED === 'true',
+        keyPath: process.env.HTTPS_KEY || './certs/key.pem',
+        certPath: process.env.HTTPS_CERT || './certs/cert.pem',
+    },
+
+    // Railway / production detection
+    isProduction: process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT,
 };
 
 // ============================================================================
@@ -366,12 +379,17 @@ async function createServer() {
     // ========================================================================
 
     app.get('/api/v1/proving/assets', (req, res) => {
+        // Auto-detect base URL from request if not configured
+        const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
+        const baseUrl = config.assetsBaseUrl || `${protocol}://${host}/assets`;
+
         res.json({
             circuit: 'entity_type_proof',
             assets: {
-                wasm: `${config.assetsBaseUrl}/entity_type_proof.wasm`,
-                zkey: `${config.assetsBaseUrl}/entity_type_final.zkey`,
-                verificationKey: `${config.assetsBaseUrl}/verification_key.json`
+                wasm: `${baseUrl}/entity_type_proof.wasm`,
+                zkey: `${baseUrl}/entity_type_final.zkey`,
+                verificationKey: `${baseUrl}/verification_key.json`
             },
             merkleDepth: config.merkleDepth,
             circuitHash: 'ce4b4dda a33748ab b942171b 617e3c39'
@@ -561,8 +579,19 @@ async function createServer() {
     // ========================================================================
 
     app.get('/health', (req, res) => {
-        res.json({ status: 'ok', timestamp: new Date().toISOString() });
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            environment: config.isProduction ? 'production' : 'development'
+        });
     });
+
+    // ========================================================================
+    // STATIC ASSETS (for proving files)
+    // ========================================================================
+
+    app.use('/assets', express.static('../build/entity_type_proof_js'));
+    app.use('/assets', express.static('../setup'));
 
     return app;
 }
@@ -571,8 +600,73 @@ async function createServer() {
 // START SERVER
 // ============================================================================
 
-createServer().then(app => {
-    app.listen(config.port, () => {
-        console.log(`Entity Identity API running on port ${config.port}`);
-    });
-}).catch(console.error);
+async function startServer() {
+    const app = await createServer();
+
+    // Railway handles TLS termination, so we just use HTTP there
+    if (config.isProduction) {
+        const server = http.createServer(app);
+        server.listen(config.port, '0.0.0.0', () => {
+            console.log(`Entity Identity API running on port ${config.port} (production)`);
+        });
+        return;
+    }
+
+    // Development: optionally start HTTPS
+    if (config.https.enabled) {
+        if (!existsSync(config.https.keyPath) || !existsSync(config.https.certPath)) {
+            console.log('HTTPS enabled but certificates not found. Generating self-signed...');
+            await generateSelfSignedCert();
+        }
+
+        const httpsOptions = {
+            key: readFileSync(config.https.keyPath),
+            cert: readFileSync(config.https.certPath),
+        };
+
+        // Start HTTPS server
+        https.createServer(httpsOptions, app).listen(config.httpsPort, () => {
+            console.log(`Entity Identity API (HTTPS) running on port ${config.httpsPort}`);
+        });
+
+        // Also start HTTP with redirect
+        http.createServer((req, res) => {
+            res.writeHead(301, { Location: `https://${req.headers.host?.replace(`:${config.port}`, `:${config.httpsPort}`)}${req.url}` });
+            res.end();
+        }).listen(config.port, () => {
+            console.log(`HTTP redirect running on port ${config.port} -> ${config.httpsPort}`);
+        });
+    } else {
+        // HTTP only (development default)
+        app.listen(config.port, () => {
+            console.log(`Entity Identity API running on http://localhost:${config.port}`);
+            console.log('Tip: Set HTTPS_ENABLED=true for HTTPS support');
+        });
+    }
+}
+
+// ============================================================================
+// SELF-SIGNED CERTIFICATE GENERATION
+// ============================================================================
+
+async function generateSelfSignedCert() {
+    const { execSync } = await import('child_process');
+    const { mkdirSync } = await import('fs');
+
+    try {
+        mkdirSync('./certs', { recursive: true });
+
+        execSync(`openssl req -x509 -newkey rsa:4096 -keyout ./certs/key.pem -out ./certs/cert.pem -days 365 -nodes -subj "/CN=localhost"`, {
+            stdio: 'pipe'
+        });
+
+        console.log('Self-signed certificate generated in ./certs/');
+    } catch (e) {
+        console.error('Failed to generate certificate. Install OpenSSL or provide certs manually.');
+        console.error('Error:', e.message);
+        process.exit(1);
+    }
+}
+
+// Start
+startServer().catch(console.error);
