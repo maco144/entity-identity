@@ -209,10 +209,27 @@ async function createServer() {
 
     // Load verification key
     let verificationKey;
-    try {
-        verificationKey = JSON.parse(readFileSync('../setup/verification_key.json', 'utf-8'));
-    } catch (e) {
+    const vkeyPaths = [
+        './setup/verification_key.json',      // From project root (production)
+        '../setup/verification_key.json',     // From api/ directory (development)
+        '/app/setup/verification_key.json',   // Absolute path in Docker
+    ];
+
+    for (const vkeyPath of vkeyPaths) {
+        try {
+            if (existsSync(vkeyPath)) {
+                verificationKey = JSON.parse(readFileSync(vkeyPath, 'utf-8'));
+                console.log(`Loaded verification key from: ${vkeyPath}`);
+                break;
+            }
+        } catch (e) {
+            // Try next path
+        }
+    }
+
+    if (!verificationKey) {
         console.warn('Warning: verification_key.json not found. Verification disabled.');
+        console.warn('Searched paths:', vkeyPaths.join(', '));
     }
 
     // Express app
