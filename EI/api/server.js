@@ -10,7 +10,8 @@ import Database from 'better-sqlite3';
 import { buildPoseidon } from 'circomlibjs';
 import { buildEddsa } from 'circomlibjs';
 import * as snarkjs from 'snarkjs';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import { randomBytes, createHash } from 'crypto';
 import https from 'https';
 import http from 'http';
@@ -43,6 +44,13 @@ const config = {
 // ============================================================================
 
 function initDatabase(dbPath) {
+    // Ensure directory exists
+    const dir = dirname(dbPath);
+    if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+        console.log(`Created database directory: ${dir}`);
+    }
+
     const db = new Database(dbPath);
 
     db.exec(`
