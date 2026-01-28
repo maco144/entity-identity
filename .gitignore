@@ -11,10 +11,9 @@ build/
 *_js/
 *.wtns
 
-# Trusted setup artifacts
+# Trusted setup artifacts (large files - regenerate locally)
 *.ptau
 *.zkey
-verification_key.json
 
 # Proof outputs
 proof.json
