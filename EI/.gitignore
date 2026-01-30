@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+build/
+artifacts/
+cache/
+typechain-types/
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+coverage.json
+
+# Deployment keys (never commit)
+*.pem
+*.key
+
+# Large ceremony files
+*.ptau
+*.zkey
+
+# Local data
+api/data/
+data/
+
+# Railway
+.railway/

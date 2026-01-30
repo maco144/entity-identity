@@ -77,7 +77,9 @@ contract EntityTypeRegistry {
 
     /**
      * @notice Verify and register an entity type proof
-     * @param proof The Groth16 proof components
+     * @param proofA The first component of the Groth16 proof
+     * @param proofB The second component of the Groth16 proof
+     * @param proofC The third component of the Groth16 proof
      * @param publicSignals Public signals [nullifier, commitment, type, attestersRoot, contextId]
      */
     function verifyAndRegister(

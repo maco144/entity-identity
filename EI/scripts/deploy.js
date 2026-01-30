@@ -4,7 +4,8 @@
  * Usage: npx hardhat run scripts/deploy.js --network sepolia
  */
 
-import { ethers, run } from "hardhat";
+import pkg from "hardhat";
+const { ethers, run } = pkg;
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
