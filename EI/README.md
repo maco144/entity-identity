@@ -1,249 +1,250 @@
-# Entity Identity Type - ZK Proof System
+# Entity Identity - ZK Proof System
 
 A zero-knowledge proof system for proving entity types (AI, robot, human, hybrid) without revealing identity.
 
-## What is Circom?
+## Quick Start
 
-Circom is a **domain-specific language** for writing arithmetic circuits that compile to zero-knowledge proof systems.
+```bash
+# Install dependencies
+npm install
 
-### The Key Mental Shift
+# List all 16 entity types
+npm run types
 
-Traditional programming: *"Do these steps, return result"*
-Circom: *"Define mathematical relationships that must all be true"*
+# Run tests
+npm test           # ZK proof test
+npm run test:sdk   # Jest unit tests (12 tests)
 
-You're not writing procedures—you're writing **constraints** that describe valid states.
+# Start API server
+npm run api        # Runs on http://localhost:3000
 
-### Why This Matters
-
-A ZK proof says: "I know secret values that satisfy all these constraints, but I won't tell you what they are."
-
-The prover:
-1. Knows all inputs (public + private)
-2. Computes all intermediate values
-3. Generates a cryptographic proof
-
-The verifier:
-1. Knows only public inputs
-2. Checks the proof mathematically
-3. Learns nothing about private inputs
-
-### Circom Syntax Essentials
-
-```circom
-// SIGNALS - the cryptographic values
-signal input x;        // Input to the circuit
-signal output y;       // Output from the circuit
-signal intermediate;   // Internal computation
-
-// ASSIGNMENT & CONSTRAINT
-out <-- in * 2;        // Just assigns (prover could lie!)
-out === in * 2;        // Just constrains (no value assigned)
-out <== in * 2;        // Both (safe - use this)
-
-// TEMPLATES - like functions that generate constraints
-template Multiplier() {
-    signal input a;
-    signal input b;
-    signal output c;
-    c <== a * b;       // One constraint: c = a * b
-}
-
-// USAGE
-component mult = Multiplier();
-mult.a <== 3;
-mult.b <== 4;
-// mult.c is now constrained to equal 12
-```
-
-### The R1CS Constraint
-
-Every Circom constraint compiles to this form:
-```
-(linear) × (linear) = (linear)
-```
-
-Where "linear" means: `a₀ + a₁x₁ + a₂x₂ + ...`
-
-This restriction enables the ZK math. You can't do `a * b * c` directly—must split into two constraints.
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        ATTESTER REGISTRY                        │
-│                                                                 │
-│   Anthropic ──┐                                                │
-│   OpenAI ─────┼──► Merkle Tree ──► Root (published on-chain)   │
-│   Gov Agency ─┘                                                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      ATTESTATION FLOW                           │
-│                                                                 │
-│   Entity                    Attester                            │
-│   ──────                    ────────                            │
-│   secret ──┐                                                    │
-│   salt ────┼──► commitment = Hash(secret, salt)                │
-│            │                    │                               │
-│            │                    ▼                               │
-│            │    message = Hash(commitment, type)                │
-│            │                    │                               │
-│            │                    ▼                               │
-│            │    signature = Sign(privateKey, message)           │
-│            │                    │                               │
-│            └────────────────────┼───────────────────────────────│
-│                                 ▼                               │
-│                          ATTESTATION                            │
-│                   (stored by entity privately)                  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       PROOF GENERATION                          │
-│                                                                 │
-│   PUBLIC INPUTS              PRIVATE INPUTS                     │
-│   ─────────────              ──────────────                     │
-│   • claimed_type             • entity_secret                    │
-│   • attesters_root           • entity_salt                      │
-│   • context_id               • attester_pubkey                  │
-│                              • signature                        │
-│                              • merkle_path                      │
-│                                     │                           │
-│                                     ▼                           │
-│                            ┌───────────────┐                    │
-│                            │    CIRCUIT    │                    │
-│                            │               │                    │
-│                            │ 1. Verify sig │                    │
-│                            │ 2. Check tree │                    │
-│                            │ 3. Gen nullif │                    │
-│                            └───────────────┘                    │
-│                                     │                           │
-│                                     ▼                           │
-│   PUBLIC OUTPUTS                                                │
-│   ──────────────                                                │
-│   • nullifier (prevents reuse)                                  │
-│   • entity_commitment (stable pseudonym)                        │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        VERIFICATION                             │
-│                                                                 │
-│   Verifier receives:                                            │
-│   • proof (cryptographic blob, ~200 bytes)                      │
-│   • public_signals [nullifier, commitment, type, root, ctx]     │
-│                                                                 │
-│   Verifier checks:                                              │
-│   1. proof is mathematically valid                              │
-│   2. attesters_root matches known registry                      │
-│   3. nullifier hasn't been used before                          │
-│   4. context_id matches expected session                        │
-│                                                                 │
-│   Verifier learns:                                              │
-│   ✓ Entity is type X                                            │
-│   ✓ An approved attester vouched for them                       │
-│   ✗ Which entity (only commitment)                              │
-│   ✗ Which attester                                              │
-│   ✗ Any other metadata                                          │
-└─────────────────────────────────────────────────────────────────┘
+# Deploy contracts locally
+npx hardhat node &
+npx hardhat run scripts/deploy.js --network localhost
 ```
 
 ## Entity Type Codes
 
-| Code | Prefix | Category | Phonetic | Description |
-|------|--------|----------|----------|-------------|
-| AI.CA | 0x01 | 0x01 | Kah | Conversational Agent |
-| AI.PO | 0x01 | 0x02 | Poe | Program Orchestrator |
-| AI.WS | 0x01 | 0x03 | Wiz | Web Site |
-| AI.OS | 0x01 | 0x04 | Aus | Operating System |
-| AI.GN | 0x01 | 0x05 | Jen | Generative Model |
-| AI.AA | 0x01 | 0x06 | Ahh | Autonomous Agent |
-| AR.RB | 0x02 | 0x01 | Rob | Robot Bot |
-| AR.DR | 0x02 | 0x02 | Dar | Drone |
-| AR.VH | 0x02 | 0x03 | Vee | Vehicle |
-| HU.US | 0x03 | 0x01 | Who | Human User |
-| HY.CP | 0x04 | 0x01 | Kip | Copilot |
-| HY.HS | 0x04 | 0x02 | His | Hive Swarm |
+16 types across 4 categories with phonetic names for verbal disambiguation:
 
-## Building & Running
+| Code | Hex | Phonetic | Description |
+|------|-----|----------|-------------|
+| **AI - Artificial Intelligence** ||||
+| AI.CA | 0x0101 | Kah | Conversational Agent |
+| AI.PO | 0x0102 | Poe | Program Orchestrator |
+| AI.WS | 0x0103 | Wiz | Web Site |
+| AI.OS | 0x0104 | Aus | Operating System |
+| AI.GN | 0x0105 | Jen | Generative Model |
+| AI.AA | 0x0106 | Ahh | Autonomous Agent |
+| AI.LM | 0x0107 | Elm | Language Model |
+| AI.DB | 0x0108 | Deb | Data Broker |
+| AI.JG | 0x0109 | Jig | Judge/Evaluator |
+| AI.SY | 0x010A | Sigh | Synthetic Media Generator |
+| **AR - Artificial Robotics** ||||
+| AR.RB | 0x0201 | Rob | Robot Bot |
+| AR.DR | 0x0202 | Dar | Drone |
+| AR.VH | 0x0203 | Vee | Vehicle |
+| **HU - Human** ||||
+| HU.US | 0x0301 | Who | Human User |
+| **HY - Hybrid** ||||
+| HY.CP | 0x0401 | Kip | Copilot (human-AI pair) |
+| HY.HS | 0x0402 | His | Hive Swarm |
+
+## CLI Usage
+
+```bash
+# List all entity types
+npx eid types
+
+# Generate a proof
+npx eid prove --type AI.CA --context session123 --output proof.json
+
+# Verify a proof
+npx eid verify --proof proof.json
+```
+
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/v1/registry` | - | Get attesters merkle root |
+| GET | `/api/v1/registry/attesters` | - | List approved attesters |
+| GET | `/api/v1/registry/attesters/:id/proof` | - | Get merkle proof for attester |
+| POST | `/api/v1/attest` | Attester | Create signed attestation |
+| GET | `/api/v1/proving/assets` | - | Get circuit WASM + zkey URLs |
+| POST | `/api/v1/verify` | - | Verify ZK proof |
+| POST | `/api/v1/verify/record` | - | Record nullifier |
+| POST | `/api/v1/admin/attesters` | Admin | Register new attester |
+| DELETE | `/api/v1/admin/attesters/:id` | Admin | Revoke attester |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      DUAL-LAYER SYSTEM                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 1: ZK (Private)         │  Layer 2: Public Trust        │
+│  • Proves type without ID      │  • Attestation history        │
+│  • Hides: entity, attester     │  • Builds reputation          │
+│  • Uses: Groth16 proofs        │  • Sybil resistance           │
+├─────────────────────────────────────────────────────────────────┤
+│  Interaction Levels:                                            │
+│  0 = Anonymous       │ Browsing, reading                        │
+│  1 = Type Only (ZK)  │ Comments, basic API access               │
+│  2 = Type + Standing │ Transactions, publishing                 │
+│  3 = Full Account.   │ Legal, financial, physical access        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Attestation Flow
+
+```
+Entity                      Attester                    Verifier
+──────                      ────────                    ────────
+secret + salt
+    │
+    ▼
+commitment = Hash(secret, salt)
+    │
+    └──────► Sign(commitment, type) ─────► attestation
+                                                │
+                                                ▼
+                                          ZK Proof
+                                                │
+    ◄───────────────────────────────────────────┘
+    │
+    ▼
+Generate proof with:
+• Private: secret, salt, signature, merkle path
+• Public: type, attesters root, context ID
+    │
+    └──────────────────────────────────────────► Verify proof
+                                                 • Check proof valid
+                                                 • Check root matches
+                                                 • Check nullifier unused
+                                                 • Learn: type only ✓
+```
+
+## Smart Contracts
+
+### EntityTypeRegistry.sol
+
+On-chain registry for ZK proof verification.
+
+```solidity
+// Verify and register an entity type proof
+function verifyAndRegister(
+    uint[2] calldata proofA,
+    uint[2][2] calldata proofB,
+    uint[2] calldata proofC,
+    uint[5] calldata publicSignals
+) external;
+
+// Check verification status
+function getVerification(bytes32 commitment) external view
+    returns (uint16 entityType, uint256 timestamp);
+
+// Check if verification is fresh
+function isVerificationFresh(bytes32 commitment, uint256 maxAge) external view
+    returns (bool fresh);
+```
+
+### Deployment
+
+```bash
+# Local Hardhat network
+npx hardhat node &
+npx hardhat run scripts/deploy.js --network localhost
+
+# Sepolia testnet (requires .env with PRIVATE_KEY)
+npx hardhat run scripts/deploy.js --network sepolia
+```
+
+## Building from Source
 
 ### Prerequisites
 
 ```bash
-# Install Circom
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Install Circom (Rust required)
 git clone https://github.com/iden3/circom.git
 cd circom && cargo build --release
 sudo cp target/release/circom /usr/local/bin/
 
-# Install snarkjs
-npm install -g snarkjs
-
 # Install dependencies
-npm install circomlibjs
+npm install
 ```
 
-### Compile Circuit
+### Build & Setup
 
 ```bash
-cd circuits
+# Using Makefile
+make install    # Install dependencies
+make build      # Compile circuits
+make setup      # Trusted setup (downloads powers of tau)
+make test       # Run all tests
+make solidity   # Export Solidity verifier
+make deploy     # Deploy to Sepolia
 
-# Compile to R1CS + WASM
-circom entity_type_proof.circom --r1cs --wasm --sym -l node_modules
-
-# View circuit info
-snarkjs r1cs info entity_type_proof.r1cs
+# Or manually
+circom circuits/entity_type_proof.circom --r1cs --wasm --sym -l node_modules -o build
 ```
 
-### Trusted Setup (Groth16)
+## What is Circom?
 
-```bash
-# Download powers of tau (or generate your own)
-wget https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_15.ptau
+Circom is a domain-specific language for writing arithmetic circuits that compile to zero-knowledge proofs.
 
-# Phase 2 setup
-snarkjs groth16 setup entity_type_proof.r1cs powersOfTau28_hez_final_15.ptau circuit_0000.zkey
+**Key mental shift:** You're not writing procedures—you're writing **constraints** that describe valid states.
 
-# Contribute randomness (production: multiple parties)
-snarkjs zkey contribute circuit_0000.zkey circuit_final.zkey --name="First contribution"
+```circom
+// Signals - cryptographic values
+signal input x;        // Input to circuit
+signal output y;       // Output from circuit
 
-# Export verification key
-snarkjs zkey export verificationkey circuit_final.zkey verification_key.json
-```
+// Constraint operators
+out <-- in * 2;        // Assigns only (prover could lie!)
+out === in * 2;        // Constrains only (no value)
+out <== in * 2;        // Both - safe, use this
 
-### Generate & Verify Proof
-
-```bash
-# Prepare inputs (see src/entity-identity.js for generation)
-cat > input.json << 'EOF'
-{
-    "claimedType": "257",
-    "attestersRoot": "12345...",
-    "contextId": "1704067200000",
-    "entitySecret": "98765...",
-    ...
+// Templates - like functions generating constraints
+template Multiplier() {
+    signal input a, b;
+    signal output c;
+    c <== a * b;  // Creates constraint: c = a * b
 }
-EOF
-
-# Compute witness
-node entity_type_proof_js/generate_witness.js entity_type_proof_js/entity_type_proof.wasm input.json witness.wtns
-
-# Generate proof
-snarkjs groth16 prove circuit_final.zkey witness.wtns proof.json public.json
-
-# Verify proof
-snarkjs groth16 verify verification_key.json public.json proof.json
 ```
 
-### On-Chain Verification
+## Performance
 
-```bash
-# Export Solidity verifier
-snarkjs zkey export solidityverifier circuit_final.zkey verifier.sol
+| Metric | Value |
+|--------|-------|
+| Circuit constraints | ~13,000 |
+| Proof generation | 2-5 seconds |
+| Proof size | ~200 bytes |
+| Verification time | ~10ms |
+| On-chain gas | ~250,000 |
 
-# Deploy verifier.sol to your chain
-# Call verifyProof(proof, publicSignals) from your contract
+## Security Considerations
+
+1. **Attester Governance**: Who can add/remove attesters? Consider multi-sig or DAO.
+2. **Nullifier Domains**: Context ID scope affects linkability vs spam prevention.
+3. **Attestation Revocation**: Epoch expiry, revocation tree, or registry rotation.
+4. **Trusted Setup**: Groth16 requires ceremony. Use MPC for production or switch to Plonk.
+
+## Project Structure
+
+```
+entity-identity/
+├── api/server.js           # REST API server
+├── circuits/               # Circom ZK circuits
+├── contracts/              # Solidity contracts
+├── src/
+│   ├── cli.js              # CLI tool
+│   ├── index.js            # SDK entry point
+│   ├── entity-identity.js  # ZK layer library
+│   └── dual-system.js      # Dual-proof system
+├── test/                   # Test suites
+├── scripts/deploy.js       # Hardhat deployment
+└── setup/                  # Trusted setup files
 ```
 
 ## Integration Patterns
@@ -252,7 +253,6 @@ snarkjs zkey export solidityverifier circuit_final.zkey verifier.sol
 
 ```http
 GET /api/data HTTP/1.1
-Host: example.com
 Entity-Type: AI.CA/1.0
 Entity-Proof: <base64-encoded-proof>
 Entity-Signals: <base64-encoded-public-signals>
@@ -263,7 +263,6 @@ Entity-Signals: <base64-encoded-public-signals>
 ```json
 {
   "sub": "entity_commitment_hash",
-  "iat": 1704067200,
   "entity_type": "AI.CA",
   "entity_proof": {
     "proof": "...",
@@ -272,56 +271,13 @@ Entity-Signals: <base64-encoded-public-signals>
 }
 ```
 
-### DID Document
+## License
 
-```json
-{
-  "@context": ["https://www.w3.org/ns/did/v1"],
-  "id": "did:eid:ai.ca:abc123",
-  "verificationMethod": [{
-    "id": "did:eid:ai.ca:abc123#zk-proof",
-    "type": "Groth16Proof2024",
-    "publicSignals": ["..."]
-  }]
-}
-```
+MIT
 
-## Security Considerations
+## See Also
 
-1. **Attester Registry Governance**: Who can add/remove attesters? Consider multi-sig or DAO.
-
-2. **Nullifier Domains**: Context ID should be chosen carefully. Too broad = linkability. Too narrow = spam.
-
-3. **Attestation Revocation**: If an entity is compromised, how do you revoke? Options:
-   - Epoch-based expiry (attestations expire)
-   - Revocation merkle tree (check non-membership)
-   - New attesters root (rotate registry)
-
-4. **Trusted Setup**: Groth16 requires trusted setup. For production:
-   - Use multi-party computation ceremony
-   - Or switch to Plonk (no trusted setup, larger proofs)
-
-## Constraint Count
-
-| Component | Constraints |
-|-----------|-------------|
-| Poseidon(2) | ~300 |
-| EdDSA verify | ~6,000 |
-| Merkle(20) | ~6,000 |
-| **Total** | **~13,000** |
-
-Performance (modern laptop):
-- Proof generation: 2-5 seconds
-- Proof size: ~200 bytes
-- Verification: ~10ms
-- On-chain gas: ~250,000
-
-## Relation to Password Palace
-
-This system could complement your spatial authentication:
-
-1. **Entity declares type** via ZK proof when initiating session
-2. **Spatial auth** verifies the entity knows the pattern
-3. **Combined claim**: "I am an AI.CA AND I know this spatial pattern"
-
-The Poseidon hashes and merkle structures align with your existing architecture.
+- `PROMPT.md` - Design context and roadmap
+- `PROJECT_INDEX.md` - Detailed project index
+- `CLAUDE.md` - Quick reference for Claude Code
+- `api/API_DESIGN.md` - Full API specification
