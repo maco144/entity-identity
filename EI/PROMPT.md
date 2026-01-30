@@ -127,7 +127,7 @@ The `entityCommitment` bridges both systems - a stable pseudonymous identifier t
 - [x] REST API server with attester registry
 - [x] CLI and SDK
 - [x] Local Hardhat deployment
-- [ ] Deploy to Sepolia testnet
+- [x] Deploy to Sepolia testnet
 - [ ] Design attester registry governance
 - [ ] Browser extension for surfacing entity types
 - [ ] Protocol integration (HTTP headers, OAuth scopes)
