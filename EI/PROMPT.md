@@ -7,18 +7,25 @@ A universal identification system for AIs, robots, humans, and hybrids on the in
 ## Core Concept
 
 **Entity Type Codes** with phonetic names for verbal disambiguation:
-- AI.CA (Kah) - Conversational Agent
-- AI.PO (Poe) - Program Orchestrator  
-- AI.WS (Wiz) - Web Site
-- AI.OS (Aus) - Operating System
-- AI.GN (Jen) - Generative Model
-- AI.AA (Ahh) - Autonomous Agent
-- AR.RB (Rob) - Robot Bot
-- AR.DR (Dar) - Drone
-- AR.VH (Vee) - Vehicle
-- HU.US (Who) - Human User
-- HY.CP (Kip) - Copilot
-- HY.HS (His) - Hive Swarm
+
+| Code | Phonetic | Description |
+|------|----------|-------------|
+| AI.CA | Kah | Conversational Agent |
+| AI.PO | Poe | Program Orchestrator |
+| AI.WS | Wiz | Web Site |
+| AI.OS | Aus | Operating System |
+| AI.GN | Jen | Generative Model |
+| AI.AA | Ahh | Autonomous Agent |
+| AI.LM | Elm | Language Model (raw LM endpoint) |
+| AI.DB | Deb | Data Broker (aggregates/transforms/routes) |
+| AI.JG | Jig | Judge/Evaluator (scoring, moderation, filters) |
+| AI.SY | Sigh | Synthetic Media Generator (deepfakes, voice clones) |
+| AR.RB | Rob | Robot Bot |
+| AR.DR | Dar | Drone |
+| AR.VH | Vee | Vehicle |
+| HU.US | Who | Human User |
+| HY.CP | Kip | Copilot (human-AI pair) |
+| HY.HS | His | Hive Swarm |
 
 ## Architecture: Dual Cryptographic System
 
@@ -65,14 +72,40 @@ Both layers required for high-stakes interactions.
 ## Files
 
 ```
-entity-identity-zk/
+entity-identity/
 ├── circuits/
 │   ├── entity_type_proof.circom      # Single-layer ZK proof
 │   └── dual_identity_proof.circom    # Combined dual-proof system
+├── contracts/
+│   ├── EntityTypeRegistry.sol        # On-chain registry
+│   └── EntityTypeVerifier.sol        # Groth16 verifier (generated)
 ├── src/
 │   ├── entity-identity.js            # JS library for ZK layer
-│   └── dual-system.js                # JS library for dual system
-└── README.md                         # Full documentation
+│   ├── dual-system.js                # JS library for dual system
+│   ├── index.js                      # SDK entry point
+│   └── cli.js                        # CLI tool
+├── api/
+│   └── server.js                     # REST API server
+├── scripts/
+│   └── deploy.js                     # Hardhat deployment
+├── test/
+│   ├── test-proof.js                 # ZK proof tests
+│   ├── test-api.js                   # API integration tests
+│   └── sdk.test.js                   # Jest SDK tests
+└── deployments/                      # Contract addresses by network
+```
+
+## CLI Usage
+
+```bash
+# List all entity types
+npx eid types
+
+# Generate a proof
+npx eid prove --type AI.CA --context session123
+
+# Verify a proof
+npx eid verify --proof proof.json
 ```
 
 ## Relation to Password Palace
@@ -85,15 +118,19 @@ This system complements spatial authentication:
 
 The `entityCommitment` bridges both systems - a stable pseudonymous identifier that links ZK privacy to public accountability without revealing the underlying secret.
 
-## Next Steps
+## Progress
 
-1. Compile circuits with circom
-2. Run trusted setup (or use existing powers of tau)
-3. Build integration tests
-4. Design attester registry governance
-5. Implement on-chain contracts for public trust layer
-6. Browser extension for surfacing entity types
-7. Protocol integration (HTTP headers, OAuth scopes)
+- [x] Compile circuits with circom
+- [x] Run trusted setup (powers of tau)
+- [x] Build integration tests
+- [x] Implement on-chain contracts (EntityTypeRegistry.sol)
+- [x] REST API server with attester registry
+- [x] CLI and SDK
+- [x] Local Hardhat deployment
+- [ ] Deploy to Sepolia testnet
+- [ ] Design attester registry governance
+- [ ] Browser extension for surfacing entity types
+- [ ] Protocol integration (HTTP headers, OAuth scopes)
 
 ## Key Insight
 
