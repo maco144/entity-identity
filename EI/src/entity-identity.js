@@ -27,7 +27,11 @@ const EntityTypes = {
     'AI.OS': 0x0104,  // Operating System
     'AI.GN': 0x0105,  // Generative Model
     'AI.AA': 0x0106,  // Autonomous Agent
-    
+    'AI.LM': 0x0107,  // Language Model
+    'AI.DB': 0x0108,  // Data Broker
+    'AI.JG': 0x0109,  // Judge/Evaluator
+    'AI.SY': 0x010A,  // Synthetic Media Generator
+
     // AR - Artificial Robotics (prefix 0x02)
     'AR.RB': 0x0201,  // Robot Bot
     'AR.DR': 0x0202,  // Drone
@@ -49,6 +53,10 @@ const PhoneticNames = {
     'AI.OS': 'Aus',
     'AI.GN': 'Jen',
     'AI.AA': 'Ahh',
+    'AI.LM': 'Elm',
+    'AI.DB': 'Deb',
+    'AI.JG': 'Jig',
+    'AI.SY': 'Sigh',
     'AR.RB': 'Rob',
     'AR.DR': 'Dar',
     'AR.VH': 'Vee',
