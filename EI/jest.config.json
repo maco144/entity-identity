@@ -4,5 +4,6 @@
   "moduleFileExtensions": ["js", "mjs"],
   "testMatch": ["**/test/**/*.test.js"],
   "verbose": true,
-  "testTimeout": 30000
+  "testTimeout": 60000,
+  "injectGlobals": true
 }

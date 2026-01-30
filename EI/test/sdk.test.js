@@ -2,8 +2,6 @@
  * Entity Identity ZK - Test Suite
  */
 
-import { jest } from '@jest/globals';
-
 // Mock crypto for Node.js environment
 const mockCrypto = {
     getRandomValues: (arr) => {
