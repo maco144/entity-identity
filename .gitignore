@@ -3,17 +3,22 @@ node_modules/
 
 # Build outputs
 build/
+# Exception: keep compiled wasm for Docker
+!build/entity_type_proof_js/
+!build/entity_type_proof_js/entity_type_proof.wasm
+!build/entity_type_proof_js/generate_witness.js
+!build/entity_type_proof_js/witness_calculator.js
 
 # Circom build outputs
 *.r1cs
-*.wasm
 *.sym
-*_js/
 *.wtns
 
-# Trusted setup artifacts (large files - regenerate locally)
+# Trusted setup artifacts (large files)
 *.ptau
 *.zkey
+# Exception: keep final zkey for Docker
+!setup/entity_type_final.zkey
 
 # Proof outputs
 proof.json
