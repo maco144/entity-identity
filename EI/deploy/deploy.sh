@@ -57,6 +57,9 @@ else
     cd "$APP_DIR"
 fi
 
+# Project files are in EI/ subdirectory
+cd EI
+
 echo "   - Setting up environment..."
 if [ ! -f .env ]; then
     ADMIN_KEY=$(openssl rand -hex 32)
@@ -121,7 +124,7 @@ REMOTE_SCRIPT
 # Get the admin key for local storage
 echo ""
 echo "3. Retrieving configuration..."
-ADMIN_KEY=$(ssh root@$VPS_HOST "cat $APP_DIR/.env 2>/dev/null | grep ADMIN_API_KEY | cut -d= -f2")
+ADMIN_KEY=$(ssh root@$VPS_HOST "cat $APP_DIR/EI/.env 2>/dev/null | grep ADMIN_API_KEY | cut -d= -f2")
 
 # Save locally
 mkdir -p ~/.config/entity-identity
