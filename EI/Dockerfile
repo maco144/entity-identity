@@ -13,17 +13,21 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --only=production
 
-# Copy application code
-COPY . .
+# Copy only necessary application code (not node_modules, .git, etc.)
+COPY api/ ./api/
+COPY src/ ./src/
+COPY build/ ./build/
+COPY setup/ ./setup/
 
-# Create data directory
-RUN mkdir -p api/data
+# Create data directory for SQLite
+RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 3000
 
 # Set production environment
 ENV NODE_ENV=production
+ENV DB_PATH=/app/data/ei.db
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

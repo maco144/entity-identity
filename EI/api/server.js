@@ -17,6 +17,17 @@ import https from 'https';
 import http from 'http';
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+function findFile(paths) {
+    for (const p of paths) {
+        if (existsSync(p)) return p;
+    }
+    return null;
+}
+
+// ============================================================================
 // CONFIGURATION
 // ============================================================================
 
@@ -332,6 +343,31 @@ async function createServer() {
     });
 
     // ========================================================================
+    // ROUTES: Types
+    // ========================================================================
+
+    app.get('/api/v1/types', (req, res) => {
+        const types = Object.entries(EntityTypes).map(([code, info]) => ({
+            code,
+            hex: '0x' + info.code.toString(16).padStart(4, '0'),
+            numeric: info.code,
+            name: info.name,
+            phonetic: info.phonetic,
+            category: code.split('.')[0]
+        }));
+
+        res.json({
+            types,
+            categories: {
+                AI: 'Artificial Intelligence',
+                AR: 'Autonomous Robotics',
+                HU: 'Human',
+                HY: 'Hybrid'
+            }
+        });
+    });
+
+    // ========================================================================
     // ROUTES: Attestation
     // ========================================================================
 
@@ -423,6 +459,125 @@ async function createServer() {
             merkleDepth: config.merkleDepth,
             circuitHash: 'ce4b4dda a33748ab b942171b 617e3c39'
         });
+    });
+
+    // ========================================================================
+    // ROUTES: Proof Generation
+    // ========================================================================
+
+    app.post('/api/v1/prove', attestLimiter, attesterAuth, async (req, res) => {
+        const { entityType, entitySecret, context } = req.body;
+
+        // Validate entity type
+        if (!EntityTypes[entityType]) {
+            return res.status(400).json({ error: 'invalid_type', message: `Unknown entity type: ${entityType}` });
+        }
+
+        // Check attester is allowed for this type
+        const allowedTypes = JSON.parse(req.attester.allowed_types);
+        if (!allowedTypes.includes(entityType)) {
+            return res.status(403).json({
+                error: 'type_not_allowed',
+                message: `Attester not authorized for type ${entityType}`
+            });
+        }
+
+        try {
+            // Generate entity salt if not provided (can be derived from secret)
+            const secretBigInt = BigInt('0x' + createHash('sha256').update(entitySecret || randomBytes(32).toString('hex')).digest('hex'));
+            const saltBigInt = BigInt('0x' + createHash('sha256').update(entitySecret + ':salt').digest('hex'));
+
+            // Compute entity commitment
+            const entityCommitment = hash([secretBigInt, saltBigInt]);
+
+            // Get type code
+            const typeCode = BigInt(EntityTypes[entityType].code);
+
+            // Create message and sign
+            const message = hash([entityCommitment, typeCode]);
+            const attesterPrivKeyHex = req.attester.private_key_encrypted;
+            const attesterPrivKey = Buffer.from(attesterPrivKeyHex.padStart(64, '0'), 'hex');
+
+            const msgF = poseidon.F.e(message);
+            const signature = eddsa.signPoseidon(attesterPrivKey, msgF);
+            const signatureR8X = eddsa.F.toObject(signature.R8[0]);
+            const signatureR8Y = eddsa.F.toObject(signature.R8[1]);
+            const signatureS = signature.S;
+
+            // Get merkle proof for attester
+            const attesterProof = attesterTree.getProof(req.attester.merkle_index);
+            const attestersRoot = attesterTree.getRoot();
+
+            // Context ID
+            const contextId = context
+                ? BigInt('0x' + createHash('sha256').update(context).digest('hex').slice(0, 16))
+                : BigInt(Date.now());
+
+            // Prepare circuit inputs
+            const circuitInputs = {
+                claimedType: typeCode.toString(),
+                attestersRoot: attestersRoot.toString(),
+                contextId: contextId.toString(),
+                entitySecret: secretBigInt.toString(),
+                entitySalt: saltBigInt.toString(),
+                attesterPubKeyX: req.attester.public_key_x,
+                attesterPubKeyY: req.attester.public_key_y,
+                signatureR8X: signatureR8X.toString(),
+                signatureR8Y: signatureR8Y.toString(),
+                signatureS: signatureS.toString(),
+                attesterPathElements: attesterProof.pathElements.map(e => e.toString()),
+                attesterPathIndices: attesterProof.pathIndices.map(i => i.toString()),
+            };
+
+            // Find circuit files
+            const wasmPath = findFile([
+                './build/entity_type_proof_js/entity_type_proof.wasm',
+                '../build/entity_type_proof_js/entity_type_proof.wasm',
+            ]);
+            const zkeyPath = findFile([
+                './setup/entity_type_final.zkey',
+                '../setup/entity_type_final.zkey',
+            ]);
+
+            if (!wasmPath || !zkeyPath) {
+                return res.status(500).json({ error: 'setup_missing', message: 'Circuit files not found' });
+            }
+
+            // Generate proof
+            const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+                circuitInputs,
+                wasmPath,
+                zkeyPath
+            );
+
+            // Record the attestation
+            db.prepare(`
+                INSERT INTO attestations (entity_commitment, entity_type, attester_id, signature_r8_x, signature_r8_y, signature_s, context_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                entityCommitment.toString(),
+                entityType,
+                req.attester.id,
+                signatureR8X.toString(),
+                signatureR8Y.toString(),
+                signatureS.toString(),
+                contextId.toString()
+            );
+
+            res.json({
+                success: true,
+                proof,
+                publicSignals,
+                entityType,
+                typeCode: EntityTypes[entityType].code,
+                commitment: entityCommitment.toString(),
+                contextId: contextId.toString()
+            });
+
+        } catch (e) {
+            console.error('Proof generation error:', e);
+            res.status(500).json({ error: 'proof_failed', message: 'Failed to generate proof: ' + e.message });
+        }
     });
 
     // ========================================================================

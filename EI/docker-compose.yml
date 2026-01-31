@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  entity-identity:
+    build: .
+    container_name: entity-identity
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/ei.db
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-change-me-in-production}
+    volumes:
+      - ei-data:/app/data
+    networks:
+      - web
+
+volumes:
+  ei-data:
+    driver: local
+
+networks:
+  web:
+    external: true
