@@ -2,6 +2,29 @@
 
 A zero-knowledge proof system for proving entity types (AI, robot, human, hybrid) without revealing identity.
 
+**Live API:** http://149.28.33.118:3000
+
+## For AI Agents
+
+Generate a proof that you're a specific entity type:
+
+```bash
+curl -X POST http://149.28.33.118:3000/api/v1/prove \
+  -H "Authorization: Bearer <your-api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"entityType": "AI.CA", "entitySecret": "your-secret", "context": "session-1"}'
+```
+
+Verify another agent's proof:
+
+```bash
+curl -X POST http://149.28.33.118:3000/api/v1/verify \
+  -H "Content-Type: application/json" \
+  -d '{"proof": {...}, "publicSignals": [...]}'
+```
+
+See [deploy/AGENT_PROTOCOL.md](deploy/AGENT_PROTOCOL.md) for full integration guide.
+
 ## Quick Start
 
 ```bash
@@ -65,15 +88,17 @@ npx eid verify --proof proof.json
 
 ## API Endpoints
 
+**Base URL:** http://149.28.33.118:3000
+
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| GET | `/health` | - | Health check |
+| GET | `/api/v1/types` | - | List all 16 entity types |
 | GET | `/api/v1/registry` | - | Get attesters merkle root |
 | GET | `/api/v1/registry/attesters` | - | List approved attesters |
-| GET | `/api/v1/registry/attesters/:id/proof` | - | Get merkle proof for attester |
+| POST | `/api/v1/prove` | Attester | Generate ZK proof (server-side) |
 | POST | `/api/v1/attest` | Attester | Create signed attestation |
-| GET | `/api/v1/proving/assets` | - | Get circuit WASM + zkey URLs |
 | POST | `/api/v1/verify` | - | Verify ZK proof |
-| POST | `/api/v1/verify/record` | - | Record nullifier |
 | POST | `/api/v1/admin/attesters` | Admin | Register new attester |
 | DELETE | `/api/v1/admin/attesters/:id` | Admin | Revoke attester |
 
@@ -149,6 +174,14 @@ function isVerificationFresh(bytes32 commitment, uint256 maxAge) external view
     returns (bool fresh);
 ```
 
+### Deployed Contracts
+
+**Sepolia Testnet:**
+| Contract | Address |
+|----------|---------|
+| Groth16Verifier | [`0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E`](https://sepolia.etherscan.io/address/0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E#code) |
+| EntityTypeRegistry | [`0xFb637C39439f969e5Cc0b1910308146f1DD529Fe`](https://sepolia.etherscan.io/address/0xFb637C39439f969e5Cc0b1910308146f1DD529Fe#code) |
+
 ### Deployment
 
 ```bash
@@ -158,6 +191,10 @@ npx hardhat run scripts/deploy.js --network localhost
 
 # Sepolia testnet (requires .env with PRIVATE_KEY)
 npx hardhat run scripts/deploy.js --network sepolia
+
+# Docker deployment to VPS
+./deploy/deploy.sh <vps-ip> [domain]
+./deploy/register-attester.sh <id> <name> <types>
 ```
 
 ## Building from Source
