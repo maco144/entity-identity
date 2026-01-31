@@ -91,6 +91,19 @@ function initDatabase(dbPath) {
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS attestations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_commitment TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            attester_id TEXT NOT NULL,
+            signature_r8_x TEXT NOT NULL,
+            signature_r8_y TEXT NOT NULL,
+            signature_s TEXT NOT NULL,
+            context_id TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (attester_id) REFERENCES attesters(id)
+        );
+
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             action TEXT NOT NULL,
