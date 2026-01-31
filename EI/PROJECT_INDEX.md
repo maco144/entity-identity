@@ -105,7 +105,11 @@ On-chain registry for ZK proof verification.
 ### `EntityTypeVerifier.sol`
 Auto-generated Groth16 verifier from snarkjs.
 
-**Deployed (Sepolia - live):**
+**API Server (live):**
+- URL: `http://149.28.33.118:3000`
+- Endpoints: `/api/v1/types`, `/api/v1/prove`, `/api/v1/verify`
+
+**Deployed (Sepolia - on-chain):**
 - Verifier: [`0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E`](https://sepolia.etherscan.io/address/0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E#code)
 - Registry: [`0xFb637C39439f969e5Cc0b1910308146f1DD529Fe`](https://sepolia.etherscan.io/address/0xFb637C39439f969e5Cc0b1910308146f1DD529Fe#code)
 

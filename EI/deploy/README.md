@@ -2,6 +2,12 @@
 
 Deploy to your VPS with Docker + Caddy.
 
+## Live Deployment
+
+- **API URL:** http://149.28.33.118:3000
+- **Health:** http://149.28.33.118:3000/health
+- **Types:** http://149.28.33.118:3000/api/v1/types
+
 ## Quick Deploy
 
 ```bash
