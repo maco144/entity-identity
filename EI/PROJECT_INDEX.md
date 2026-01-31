@@ -2,9 +2,9 @@
 
 > Zero-knowledge proof system for universal entity type verification (AIs, robots, humans, hybrids)
 
-**Generated:** 2026-01-30
+**Generated:** 2026-01-31
 **Version:** 0.1.0
-**Lines of Code:** ~3,375
+**Lines of Code:** ~4,156
 
 ---
 
@@ -105,7 +105,11 @@ On-chain registry for ZK proof verification.
 ### `EntityTypeVerifier.sol`
 Auto-generated Groth16 verifier from snarkjs.
 
-**Deployed (localhost):**
+**Deployed (Sepolia - live):**
+- Verifier: [`0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E`](https://sepolia.etherscan.io/address/0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E#code)
+- Registry: [`0xFb637C39439f969e5Cc0b1910308146f1DD529Fe`](https://sepolia.etherscan.io/address/0xFb637C39439f969e5Cc0b1910308146f1DD529Fe#code)
+
+**Deployed (localhost - for local dev):**
 - Verifier: `0x5FbDB2315678afecb367f032d93F642f64180aa3`
 - Registry: `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512`
 
@@ -172,6 +176,9 @@ npm run api
 # Deploy contracts (local)
 npx hardhat node &
 npx hardhat run scripts/deploy.js --network localhost
+
+# Deploy to Sepolia (requires .env with PRIVATE_KEY)
+npx hardhat run scripts/deploy.js --network sepolia
 ```
 
 ---

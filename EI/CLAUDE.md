@@ -46,12 +46,19 @@ npm run test:sdk   # Run Jest unit tests (12 tests)
 - Solidity contracts (Hardhat)
 - Jest tests
 
+## Deployments
+
+| Network | Verifier | Registry |
+|---------|----------|----------|
+| Sepolia | [`0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E`](https://sepolia.etherscan.io/address/0x7444ba1b14a8dfC3342e3190b2Be991bA4A3801E#code) | [`0xFb637C39439f969e5Cc0b1910308146f1DD529Fe`](https://sepolia.etherscan.io/address/0xFb637C39439f969e5Cc0b1910308146f1DD529Fe#code) |
+
 ## Common Tasks
 
 - **Add entity type:** Edit `api/server.js` and `src/entity-identity.js` EntityTypes objects
 - **Add API endpoint:** Edit `api/server.js`
 - **Deploy contracts:** `npx hardhat run scripts/deploy.js --network <network>`
 - **Run local node:** `npx hardhat node`
+- **Verify on Etherscan:** `npx hardhat verify --network sepolia <address>`
 
 ## See Also
 
