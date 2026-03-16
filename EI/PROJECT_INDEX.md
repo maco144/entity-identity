@@ -2,7 +2,7 @@
 
 > Zero-knowledge proof system for universal entity type verification (AIs, robots, humans, hybrids)
 
-**Generated:** 2026-01-31
+**Generated:** 2026-03-16
 **Version:** 0.1.0
 **Lines of Code:** ~4,156
 
@@ -26,7 +26,8 @@ entity-identity/
 │   ├── entity-identity.js  # ZK layer library
 │   └── dual-system.js      # Dual-proof system
 ├── scripts/
-│   └── deploy.js           # Hardhat deployment
+│   ├── deploy.js           # Hardhat deployment
+│   └── anchor-root.js      # Post registry root to Ethereum
 ├── test/
 │   ├── test-proof.js       # ZK proof tests
 │   ├── test-api.js         # API integration tests
@@ -46,6 +47,7 @@ entity-identity/
 | API Server | `api/server.js` | `npm run api` |
 | SDK | `src/index.js` | `import { ... } from 'entity-identity'` |
 | Deploy | `scripts/deploy.js` | `npx hardhat run scripts/deploy.js` |
+| Anchor Root | `scripts/anchor-root.js` | `node scripts/anchor-root.js [--dry-run]` |
 
 ---
 
@@ -65,10 +67,16 @@ Dual-proof architecture combining ZK privacy with public accountability.
 Command-line interface for proof generation and verification.
 - **Commands:** `prove`, `verify`, `types`
 
+### `scripts/anchor-root.js`
+Posts the EI registry Merkle root to Ethereum for on-chain tamper-evidence.
+- **Usage:** `node scripts/anchor-root.js [--dry-run] [--network sepolia|mainnet|arbitrum]`
+- **Env:** `EI_PRIVATE_KEY`, `EI_API_URL`
+
 ### `api/server.js`
-REST API with SQLite-backed attester registry.
+REST API with SQLite-backed attester registry and attestation storage.
 - **Endpoints:** `/api/v1/registry`, `/api/v1/attest`, `/api/v1/verify`, `/api/v1/admin/attesters`
 - **Auth:** Bearer token for attesters, Admin API key for management
+- **DB Tables:** `attesters`, `nullifiers`, `registry_state`, `attestations`, `audit_log`
 
 ---
 
@@ -227,3 +235,4 @@ npx hardhat run scripts/deploy.js --network sepolia
 | Update smart contract | `contracts/EntityTypeRegistry.sol` |
 | Add CLI command | `src/cli.js` |
 | Add SDK export | `src/index.js` |
+| Anchor root on-chain | `scripts/anchor-root.js` |

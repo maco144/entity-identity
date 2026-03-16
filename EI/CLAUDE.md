@@ -61,6 +61,7 @@ npm run test:sdk   # Run Jest unit tests (12 tests)
 
 - **Add entity type:** Edit `api/server.js` and `src/entity-identity.js` EntityTypes objects
 - **Add API endpoint:** Edit `api/server.js`
+- **Anchor root on-chain:** `node scripts/anchor-root.js [--dry-run] [--network sepolia]`
 - **Deploy contracts:** `npx hardhat run scripts/deploy.js --network <network>`
 - **Run local node:** `npx hardhat node`
 - **Verify on Etherscan:** `npx hardhat verify --network sepolia <address>`
